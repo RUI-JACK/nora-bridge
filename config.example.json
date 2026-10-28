@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "instance_id": "00000000000000000000000000000000",
+  "install_dir": "C:\\Users\\<username>\\AppData\\Local\\NoraBridge",
+  "owner_profile": "C:\\Users\\<username>",
+  "owner_sid": "<filled by installer>",
+  "listen_ip": "100.64.0.10",
+  "listen_port": 17643,
+  "self_node_id": "<pinned local Tailscale node ID>",
+  "tailscale_path": "C:\\Program Files\\Tailscale\\tailscale.exe",
+  "tailscale_interface": "Tailscale",
+  "allowed_peer": { "id": "<pinned Agent node ID>", "name": "agent-device", "ip": "100.64.0.20" },
+  "ego_path": null,
+  "file_root": "C:\\Users\\<username>",
+  "task_name": "NoraBridge-MVP-00000000000000000000000000000000",
+  "watchdog_task_name": "NoraBridge-MVP-00000000000000000000000000000000-Watchdog"
+}
