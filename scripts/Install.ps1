@@ -94,7 +94,7 @@ try {
     $existingRules=@(Get-NetFirewallRule -DisplayName 'Tailscale-In' -ErrorAction SilentlyContinue|Where-Object {$_.Enabled -eq 'True' -and $_.Action -eq 'Allow'}|Get-NetFirewallAddressFilter|Where-Object {$_.LocalAddress -contains $localIp[0]})
     if($existingRules.Count){$firewall='existing Tailscale-In rule'}
     if(-not $NoStart){Remove-Item -LiteralPath (Join-Path $root 'disabled') -Force;Start-ScheduledTask -TaskName $names.Main -ErrorAction Stop;$null=Wait-NoraReady $root}
-    $report=@{product=$script:NoraProduct;version='0.1.0';directory=$root;listen=($localIp[0]+':'+$Port);agent=$agent.HostName;agent_ip=$agentIp;token_file=$token;ego_enabled=[bool]$EgoPath;main_task=$names.Main;watchdog_task=$names.Watchdog;started=(-not $NoStart);firewall=$firewall}
+    $report=@{product=$script:NoraProduct;version='0.1.1';directory=$root;listen=($localIp[0]+':'+$Port);agent=$agent.HostName;agent_ip=$agentIp;token_file=$token;ego_enabled=[bool]$EgoPath;main_task=$names.Main;watchdog_task=$names.Watchdog;started=(-not $NoStart);firewall=$firewall}
     Write-NoraJson (Join-Path $root 'installation-result.json') $report
     Write-Host 'Nora Bridge MVP 安装完成。'
     Write-Host ('监听地址：http://'+$report.listen)

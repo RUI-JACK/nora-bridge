@@ -1,6 +1,8 @@
 # Nora Bridge — Windows x64 通用安装 MVP
 
-版本 **0.1.0**。这是从专用版 1.0.3 的进程管理核心独立出来的通用安装版本。没有编译进用户名、本机 IP、Agent 名称或旧 token，不会接管已有专用版。
+版本 **0.1.1**。这是从专用版 1.0.3 的进程管理核心独立出来的通用安装版本。没有编译进用户名、本机 IP、Agent 名称或旧 token，不会接管已有专用版。
+
+0.1.1 补全了供新电脑本地 Agent 执行的部署与验收流程；运行核心沿用 0.1.0。本机历史功能验收记录见 MVP-验收报告.md，不能把该记录当作其它新电脑已经通过的证据。
 
 它是一个远程执行桥，**不包含 AI Agent、模型服务或 Tailscale/Ego 安装包**。全新电脑只装 Nora Bridge 还不能被远端控制，需要按下面的步骤准备网络与 Agent。
 
@@ -8,11 +10,127 @@
 
 ## 下载
 
-- [Windows x64 安装器](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.0/NoraBridge-0.1.0-Setup-x64.exe)：普通使用者下载这个文件。
-- [ZIP 安装版](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.0/NoraBridge-0.1.0-windows-x64.zip)：解压到临时文件夹后运行 Setup.cmd。
-- [源码 ZIP](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.0/NoraBridge-0.1.0-source.zip) · [SHA-256 校验文件](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.0/SHA256SUMS.txt) · [版本说明](https://github.com/RUI-JACK/nora-bridge/releases/tag/v0.1.0)。
+- [Windows x64 安装器](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.1/NoraBridge-0.1.1-Setup-x64.exe)：普通使用者下载这个文件。
+- [ZIP 安装版](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.1/NoraBridge-0.1.1-windows-x64.zip)：解压到临时文件夹后运行 Setup.cmd。
+- [源码 ZIP](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.1/NoraBridge-0.1.1-source.zip) · [SHA-256 校验文件](https://github.com/RUI-JACK/nora-bridge/releases/download/v0.1.1/SHA256SUMS.txt) · [版本说明](https://github.com/RUI-JACK/nora-bridge/releases/tag/v0.1.1)。
 
 GitHub 的 **Code → Download ZIP** 是源码，需要自行构建；直接安装请使用上面的 Release 安装器。私有仓库的下载需要先登录已获授权的 GitHub 账号。
+
+## 给新电脑上的 Agent：按此流程帮助机主配置
+
+本节供**已经能在这台 Windows 电脑执行本地命令**的 Agent 使用。安装桥的本地 Agent 与以后通过网络控制电脑的远端 Agent 可以不同。白名单里应选择**远端控制设备**，不能选择本机，也不能因为当前 Agent 负责安装就默认授权它的其它设备。
+
+只有远端聊天能力、尚无本机执行通道的 Agent，无法借助一个尚未安装的桥完成首次部署。需要机主先在新电脑上启动有本地工具权限的 Agent，或亲自运行安装向导。仓库目前为私有时，还需由机主授权 GitHub 访问，或把 Release 的 ZIP 与 SHA256SUMS.txt 下载到新电脑交给 Agent；不要索要或记录机主的 GitHub 密码。
+
+### 机主可以直接交给 Agent 的任务说明
+
+```text
+请按这份 README 的 Agent 部署流程，在当前 Windows 电脑配置 Nora Bridge。
+先自动检查系统、当前用户与会话、Tailscale、.NET Framework 和已有安装。
+缺失依赖按 README 的官方安装方法处理；网页登录、MFA、系统 UAC 和 Ego 首次引导由我完成。
+远端授权设备：<填写 Tailscale 设备名、IP 或设备 ID>。
+是否需要 Ego 浏览器自动化：<需要 / 暂不需要>。
+使用未加密的当前用户独立目录，不修改已有专用版、ego-run 或其它软件的任务。
+如果授权设备没有指定、找不到或有重名，请先列出候选设备，让我明确选择；不要自行猜测。
+完成后检查实际监听、任务、鉴权和命令执行；远端尚未实测的项目明确标为待验。
+只报告 token 的文件路径，不把 token 值放入聊天、命令行、日志或 GitHub。
+```
+
+### A. 自动检测，避免让机主重复填写机器信息
+
+先只读检查；不要运行安装器来猜测现有部署是否可以覆盖。以下代码使用 PowerShell，输出中不包含 token：
+
+```powershell
+$ps51 = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$tsCommand = Get-Command tailscale.exe -ErrorAction SilentlyContinue
+$tailscale = if ($tsCommand) { $tsCommand.Source } else { Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe' }
+$framework = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue
+[pscustomobject]@{
+    os_x64 = [Environment]::Is64BitOperatingSystem
+    process_x64 = [Environment]::Is64BitProcess
+    user_profile = $env:USERPROFILE
+    session_id = [Diagnostics.Process]::GetCurrentProcess().SessionId
+    powershell_51_present = Test-Path -LiteralPath $ps51
+    net_framework_release = $framework.Release
+    tailscale_present = Test-Path -LiteralPath $tailscale
+    candidate_install = Join-Path $env:USERPROFILE 'NoraBridge'
+} | ConvertTo-Json
+```
+
+缺失依赖按下面“新电脑需要哪些软件”章节处理。Tailscale 已安装并登录后，自动列出远端候选设备，让机主确认要授权的那一台；已有明确且唯一的机主指定设备时，无需重复询问：
+
+```powershell
+$rawStatus = & $tailscale status --json
+if ($LASTEXITCODE -ne 0) { throw 'Tailscale 状态读取失败' }
+$tailnet = ($rawStatus -join "`n") | ConvertFrom-Json
+if ($tailnet.BackendState -ne 'Running') { throw '请先由机主完成 Tailscale 登录' }
+$tailnet.Peer.PSObject.Properties.Value | ForEach-Object {
+    [pscustomobject]@{ name = $_.HostName; id = $_.ID; ips = ($_.TailscaleIPs -join ', '); online = $_.Online }
+} | Format-Table -AutoSize
+```
+
+安装目录、IP、SID 和网卡都应使用本机检测结果。不要复制其它电脑的 config.json、installation.json 或 token，也不要把说明里的示例 IP 当作实际配置。
+
+### B. 使用已构建的分发包，校验后解压
+
+无需在新电脑上编译，也无需为部署安装 Node/npm/Git。优先使用 Release 的二进制 ZIP，这样本地 Agent 可直接调用内含的 Install.ps1。如果已有已授权的 GitHub CLI，可以用 `gh release download` 下载；否则由机主通过 GitHub 登录下载这两个文件即可。
+
+把下面的下载目录改成两个文件实际所在的目录；必须使用同一个 Release 的 ZIP 和校验文件：
+
+```powershell
+$downloadDir = Join-Path $env:USERPROFILE 'Downloads'
+$packageName = 'NoraBridge-0.1.1-windows-x64.zip'
+$packageFile = Join-Path $downloadDir $packageName
+$checksumFile = Join-Path $downloadDir 'SHA256SUMS.txt'
+$pattern = '(?im)^([0-9a-f]{64})  ' + [regex]::Escape($packageName) + '\r?$'
+$checksum = [regex]::Match([IO.File]::ReadAllText($checksumFile), $pattern)
+if (-not $checksum.Success) { throw '校验文件不包含所选安装包' }
+$actualHash = (Get-FileHash -LiteralPath $packageFile -Algorithm SHA256).Hash
+if ($actualHash -ne $checksum.Groups[1].Value) { throw '安装包校验失败，停止安装' }
+$payload = Join-Path $env:TEMP ('NoraBridge-Payload-' + [guid]::NewGuid().ToString('N'))
+Expand-Archive -LiteralPath $packageFile -DestinationPath $payload
+if (-not (Test-Path -LiteralPath (Join-Path $payload 'Install.ps1'))) { throw '请使用二进制安装 ZIP，不能使用源码 ZIP' }
+```
+
+### C. 用已确认的设备 ID 安装，再启动
+
+以下变量中的设备 ID 必须替换为上一步机主已确认的远端节点 ID。先安装但不启动，再检查安装结果；此例暂不启用 Ego。安装目录若已有本产品实例，重新安装会更新并停止该实例；先核对它是否就是本次要配置的实例。非空且非本产品的目录会被拒绝。
+
+```powershell
+$peerId = '<机主已确认的远端Tailscale设备ID>'
+if ($peerId -match '[<>]' -or [string]::IsNullOrWhiteSpace($peerId)) { throw '必须先指定已确认的远端设备 ID' }
+$installDir = Join-Path $env:USERPROFILE 'NoraBridge'
+$installer = Join-Path $payload 'Install.ps1'
+& $ps51 -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $installer -NonInteractive -InstallDir $installDir -Peer $peerId -SkipEgo -NoStart
+if ($LASTEXITCODE -ne 0) { throw '安装未完成；查看错误后修复，不要放宽白名单' }
+$installed = [IO.File]::ReadAllText((Join-Path $installDir 'installation-result.json')) | ConvertFrom-Json
+$installed | Select-Object version, directory, listen, agent, agent_ip, token_file, ego_enabled, started
+& $ps51 -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installDir 'Start.ps1')
+if ($LASTEXITCODE -ne 0) { throw '启动失败；检查日志及 Tailscale 身份，不要改成监听全部网卡' }
+```
+
+需要 Ego 且机主已完成首次引导时，将安装命令中的 `-SkipEgo` 替换成 `-EgoPath $egoExe`，其中 $egoExe 是已检查存在的真实 ego-browser.exe 绝对路径。不要同时传这两个参数。端口默认自动选取，不能因为默认端口已占用就终止其它程序。目录采用上面的显式路径以便后续命令一致；若该目录加密或机主另有指定，应先改为合适的未加密独立目录。
+
+### D. 分别完成本机检查和远端验收
+
+本机先运行 Status.ps1，确认实际监听位于 Tailscale 网卡、PID 存活、主任务在运行、watchdog 已启用。token 只确认文件存在和访问权限，不读取到输出中。需要执行本机内置功能自测时，可以运行：
+
+```powershell
+& $ps51 -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installDir 'Status.ps1')
+if ($LASTEXITCODE -ne 0) { throw '状态检查失败' }
+$selfTestArgs = '--data-dir "' + $installDir + '" --self-test'
+$selfTest = Start-Process -FilePath (Join-Path $installDir 'nora-bridge.exe') -ArgumentList $selfTestArgs -WindowStyle Hidden -PassThru -Wait
+if ($selfTest.ExitCode -ne 0) { throw '本机功能自测进程失败' }
+$evidence = [IO.File]::ReadAllText((Join-Path $installDir 'evidence\self-test.json')) | ConvertFrom-Json
+if (-not $evidence.passed -or $evidence.pid -ne $selfTest.Id) { throw '没有本次自测通过的证据' }
+$evidence | Select-Object version, passed, elapsed_seconds
+```
+
+内置自测会真实执行命令、35 秒后台任务、超时清理与文件往返；启用 Ego 时还会测试其执行和超时清理。它模拟授权来源，**不能代替远端网络验收**。请在机主当前交互桌面会话运行，不能从服务或 SSH 会话直接启动这项自测。
+
+随后让被授权的远端 Agent 按下文“首次连接的完整例子”执行 health、echo、60 秒任务，以及需要时的 Ego 和文件往返。机主通过可信方式将 token 放入远端既有密钥存储，本地 Agent 不在聊天中代为展示密钥。若当前只有本地 Agent，先报告本机通过、远端待验，不通过放行 localhost 或其它来源来冒充验收。防火墙缺少精确规则时按本 README 处理管理员步骤；不要关闭全局防火墙。
+
+最终向机主提交：版本、安装目录、监听地址、授权设备、token 文件路径、Ego 是否启用、启动/停止/卸载命令、每项实测输出和待验项目。注销重登由机主在合适时机执行，不能为做验收擅自注销正在使用的桌面。
 
 ## 新电脑需要哪些软件
 
@@ -115,7 +233,7 @@ python3 --version
 ## 快速安装
 
 1. 在 Windows 10/11 x64 上安装并登录 Tailscale，让本机与 Agent 加入同一 tailnet。
-2. 双击 **NoraBridge-0.1.0-Setup-x64.exe**。选择唯一授权的 Agent 设备，确认安装目录、端口；Ego 路径可选。正常用户权限即可，不需要“以管理员运行”。
+2. 双击 **NoraBridge-0.1.1-Setup-x64.exe**。选择唯一授权的 Agent 设备，确认安装目录、端口；Ego 路径可选。正常用户权限即可，不需要“以管理员运行”。
 3. 点击“安装并启动”。安装器自动固定本机/Agent 的 Tailscale 设备 ID、IP 和网卡，生成独立的 48 字节随机 token，创建仅当前用户可管理的登录与恢复任务。
 4. 将安装结果里的地址和 token 通过可信通道交给 Agent。安装器只显示 token 文件路径，不显示 token 值。
 

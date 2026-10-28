@@ -53,3 +53,17 @@
 - `SHA256SUMS.txt`：三个交付文件的 SHA-256 校验值。
 
 使用方法、API、停止/卸载命令和构建步骤见 README.md。不要复制已有专用版的 token/config 给其它电脑；每台电脑通过安装向导独立生成并绑定身份。
+
+## 0.1.1 补充：给本地 Agent 的部署流程验证
+
+本次主要更新 README 中可直接交给新电脑本地 Agent 的部署流程，程序行为沿用 0.1.0，版本号更新为 0.1.1。依赖已存在的本机交互会话中，实际提取并执行 README 的 A–D 五段 PowerShell 代码块，仅替换下载目录、独立测试安装目录和已明确授权的远端设备 ID。
+
+- 15 个 PowerShell 示例均通过语法解析。
+- 校验新版本 ZIP、随机目录解压、`Install.ps1 -NoStart`、检查安装结果、`Start.ps1`、`Status.ps1` 均成功。
+- 新实例实际监听独立的 Tailscale 端口，version=0.1.1；内置自测 passed=true，约 39.109 秒完成。
+- 真实执行中文 stdout/stderr、35 秒后台任务、超时后再次执行和文件往返；未启用 Ego 时 /ego=503。该内置测试模拟授权请求来源，不属于跨设备网络验收。
+- 独立测试实例已卸载，原专用版 PID 与监听保持。
+
+本次不是全新 Windows 系统镜像测试，未重新安装已有系统依赖或执行网页登录、UAC、Ego 首次引导，也未验证另一台电脑、注销重登或远端 Agent 网络。新电脑仍应按 README 逐项验收；不能用本机处理器自测代替远端实测。原始测试记录保存在开发目录 test-output，不进入分发包。
+
+0.1.1 的交付文件为 `NoraBridge-0.1.1-Setup-x64.exe`、`NoraBridge-0.1.1-windows-x64.zip`、`NoraBridge-0.1.1-source.zip` 及对应的 `SHA256SUMS.txt`；它们内含更新后的 README 和本报告。上文 0.1.0 的记录作为历史基线保留。
